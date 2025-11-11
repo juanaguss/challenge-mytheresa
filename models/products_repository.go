@@ -4,19 +4,22 @@ import (
 	"gorm.io/gorm"
 )
 
-type ProductsRepository struct {
+type ProductsRepository interface {
+	GetAllProducts() ([]Product, error)
+}
+type gormProductsRepository struct {
 	db *gorm.DB
 }
 
-func NewProductsRepository(db *gorm.DB) *ProductsRepository {
-	return &ProductsRepository{
+func NewProductsRepository(db *gorm.DB) ProductsRepository {
+	return &gormProductsRepository{
 		db: db,
 	}
 }
 
-func (r *ProductsRepository) GetAllProducts() ([]Product, error) {
+func (r *gormProductsRepository) GetAllProducts() ([]Product, error) {
 	var products []Product
-	if err := r.db.Preload("Variants").Find(&products).Error; err != nil {
+	if err := r.db.Preload("Variants").Preload("Category").Find(&products).Error; err != nil {
 		return nil, err
 	}
 	return products, nil
