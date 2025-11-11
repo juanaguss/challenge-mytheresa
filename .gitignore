@@ -1,5 +1,17 @@
 /vendor
 coverage.out
 
-#Jetbrains folders
+#Jetbrains and vscode folders
 .idea/
+.vscode/
+
+# Builds and dependenceis
+bin/
+vendor/
+*.exe
+*.out
+*.test
+
+# Temp files
+*.log
+*.tmp
