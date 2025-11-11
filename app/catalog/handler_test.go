@@ -20,14 +20,8 @@ func (m *mockProductsRepository) GetAllProducts() ([]models.Product, error) {
 	return m.products, m.err
 }
 
-// tests para hacer de handleGet
-// happy path: vuelven productos - vuelve un array vacio
-// error path: vuelve 500
-// crear handler con el repo
-
 func TestHandleGet_Success(t *testing.T) {
-	t.Run("Successfully returns products", func(t *testing.T) {
-
+	t.Run("Successfully returns products with their category", func(t *testing.T) {
 		// Arrange
 		mockRepo := &mockProductsRepository{
 			products: []models.Product{
@@ -35,11 +29,21 @@ func TestHandleGet_Success(t *testing.T) {
 					ID:    1,
 					Code:  "PROD001",
 					Price: decimal.NewFromFloat(270.75),
+					Category: &models.Category{
+						ID:   1,
+						Code: "clothing",
+						Name: "Clothing",
+					},
 				},
 				{
 					ID:    2,
 					Code:  "PROD002",
 					Price: decimal.NewFromFloat(400.99),
+					Category: &models.Category{
+						ID:   2,
+						Code: "shoes",
+						Name: "Shoes",
+					},
 				},
 			},
 			err: nil,
@@ -57,12 +61,11 @@ func TestHandleGet_Success(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code, "Response code does not match expected (Status 200 OK)")
 		assert.Equal(t, "application/json", w.Header().Get("Content-Type"), "Expected Content-Type application/json")
 
-		expectedJSON := `{"products":[{"code":"PROD001","price":270.75},{"code":"PROD002","price":400.99}]}`
+		expectedJSON := `{"products":[{"code":"PROD001","price":270.75,"category":"clothing"},{"code":"PROD002","price":400.99,"category":"shoes"}]}`
 		assert.JSONEq(t, expectedJSON, w.Body.String(), "Response body does not match expected JSON")
 	})
 
 	t.Run("Returns empty array when no products exist", func(t *testing.T) {
-
 		// Arrange
 		mockRepo := &mockProductsRepository{
 			products: []models.Product{},
@@ -84,11 +87,38 @@ func TestHandleGet_Success(t *testing.T) {
 		assert.JSONEq(t, expectedJSON, w.Body.String(), "Response body does not match expected empty JSON")
 
 	})
+
+	t.Run("Returns empty category when product has none", func(t *testing.T) {
+		// Arrange
+		mockRepo := &mockProductsRepository{
+			products: []models.Product{
+				{
+					ID:       1,
+					Code:     "PROD001",
+					Price:    decimal.NewFromFloat(99.01),
+					Category: nil,
+				},
+			},
+			err: nil,
+		}
+
+		handler := NewCatalogHandler(mockRepo)
+
+		// Act
+		req := httptest.NewRequest(http.MethodGet, "/catalog", nil)
+		w := httptest.NewRecorder()
+
+		handler.HandleGet(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusOK, w.Code, "Expected status 200 OK")
+		expectedJSON := `{"products":[{"code":"PROD001","price":99.01,"category":""}]}`
+		assert.JSONEq(t, expectedJSON, w.Body.String(), "Expected empty string for category when null")
+	})
 }
 
 func TestHandleGet_Error(t *testing.T) {
 	t.Run("Return error 500 when repository fails", func(t *testing.T) {
-
 		// Arrange
 		mockRepo := &mockProductsRepository{
 			products: nil,
@@ -111,7 +141,6 @@ func TestHandleGet_Error(t *testing.T) {
 
 func TestNewCatalogHandler(t *testing.T) {
 	t.Run("Creates handler with repo", func(t *testing.T) {
-
 		// Arrange
 		mockRepo := &mockProductsRepository{}
 
