@@ -1,2 +1,5 @@
 /vendor
 coverage.out
+
+#Jetbrains folders
+.idea/
