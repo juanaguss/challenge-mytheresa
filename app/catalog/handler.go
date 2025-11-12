@@ -7,8 +7,20 @@ import (
 	"github.com/mytheresa/go-hiring-challenge/models"
 )
 
+const (
+	// DefaultOffset is the default starting position for pagination.
+	DefaultOffset = 0
+	// DefaultLimit is the default number of products per page.
+	DefaultLimit = 10
+	// MinLimit is the minimum allowed products per page.
+	MinLimit = 1
+	// MaxLimit is the maximum allowed products per page.
+	MaxLimit = 100
+)
+
 type Response struct {
 	Products []Product `json:"products"`
+	Total    int       `json:"total"`
 }
 
 type Product struct {

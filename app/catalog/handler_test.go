@@ -1,7 +1,9 @@
 package catalog
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,9 +14,9 @@ import (
 )
 
 type mockProductsRepository struct {
-	products []models.Product
-	count    int64
-	err      error
+	products   []models.Product
+	totalCount int64
+	err        error
 }
 
 func (m *mockProductsRepository) GetAllProducts() ([]models.Product, error) {
@@ -22,7 +24,45 @@ func (m *mockProductsRepository) GetAllProducts() ([]models.Product, error) {
 }
 
 func (m *mockProductsRepository) GetProducts(offset, limit int) ([]models.Product, int64, error) {
-	return m.products, m.count, m.err
+	if m.err != nil {
+		return nil, 0, m.err
+	}
+
+	total := m.totalCount
+	if total == 0 && len(m.products) > 0 {
+		total = int64(len(m.products))
+	}
+
+	if offset >= len(m.products) {
+		return []models.Product{}, total, nil
+	}
+
+	end := offset + limit
+	if end > len(m.products) {
+		end = len(m.products)
+	}
+
+	return m.products[offset:end], total, nil
+}
+
+func createTestProducts(count int) []models.Product {
+	products := make([]models.Product, count)
+	categories := []models.Category{
+		{ID: 1, Code: "clothing", Name: "Clothing"},
+		{ID: 2, Code: "shoes", Name: "Shoes"},
+		{ID: 3, Code: "accessories", Name: "Accessories"},
+	}
+
+	for i := 0; i < count; i++ {
+		categoryIndex := i % len(categories)
+		products[i] = models.Product{
+			ID:       uint(i + 1),
+			Code:     fmt.Sprintf("PROD%03d", i+1),
+			Price:    decimal.NewFromInt(int64((i + 1) * 100)),
+			Category: &categories[categoryIndex],
+		}
+	}
+	return products
 }
 
 func TestHandleGet_Success(t *testing.T) {
@@ -170,3 +210,199 @@ Testeo de paginacion:
 	- offset < 0 -> badRequest.
 	- cualquiera es invalido -> badRequest.
 */
+
+func TestHandlerGet_Pagination(t *testing.T) {
+	// Arrange for every test
+	const totalProducts = 50
+	testProducts := createTestProducts(totalProducts)
+
+	t.Run("Returns default pagination when no query parameters", func(t *testing.T) {
+		// Arrange
+		mockRepo := &mockProductsRepository{
+			products:   testProducts,
+			totalCount: totalProducts,
+			err:        nil,
+		}
+
+		handler := NewCatalogHandler(mockRepo)
+
+		req := httptest.NewRequest(http.MethodGet, "/catalog", nil)
+		w := httptest.NewRecorder()
+
+		// Act
+		handler.HandleGet(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response Response
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+
+		assert.LessOrEqual(t, len(response.Products), MaxLimit, "Should not return more than maximum limit constant")
+		assert.Greater(t, len(response.Products), 0, "Should return some products")
+
+		assert.Equal(t, totalProducts, response.Total, "Total should match total products")
+
+		assert.Equal(t, "PROD001", response.Products[0].Code, "First product should be PROD001")
+	})
+
+	t.Run("Returns correct page with custom offset and limit", func(t *testing.T) {
+		// Arrange
+		offset := 10
+		limit := 5
+
+		mockRepo := &mockProductsRepository{
+			products:   testProducts,
+			totalCount: totalProducts,
+			err:        nil,
+		}
+
+		handler := NewCatalogHandler(mockRepo)
+
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/catalog?offset=%d&limit=%d", offset, limit), nil)
+		w := httptest.NewRecorder()
+
+		// Act
+		handler.HandleGet(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response Response
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+
+		assert.Equal(t, limit, len(response.Products), "Should return the requested limit")
+		assert.Equal(t, totalProducts, response.Total, "Total should match total products")
+
+		expectedFirstCode := fmt.Sprintf("PROD%03d", offset+1)
+		assert.Equal(t, expectedFirstCode, response.Products[0].Code, "First product should match offset position")
+
+		expectedLastCode := fmt.Sprintf("PROD%03d", offset+limit)
+		assert.Equal(t, expectedLastCode, response.Products[len(response.Products)-1].Code, "Last product should match offset+limit position")
+	})
+
+	t.Run("Returns remaining products in case offset+limit exceeds total", func(t *testing.T) {
+		// Arrange
+		offset := totalProducts - 3 // last 3 products
+		limit := 10                 // ask for 10 but there are 3
+
+		mockRepo := &mockProductsRepository{
+			products:   testProducts,
+			totalCount: totalProducts,
+			err:        nil,
+		}
+
+		handler := NewCatalogHandler(mockRepo)
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/catalog?offset=%d&limit=%d", offset, limit), nil)
+		w := httptest.NewRecorder()
+
+		// Act
+		handler.HandleGet(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response Response
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+
+		assert.Equal(t, 3, len(response.Products),
+			"Should return only remaining products")
+		assert.Equal(t, totalProducts, response.Total)
+	})
+
+	t.Run("Returns empty array if offset exceeds total", func(t *testing.T) {
+		// Arrange
+		offset := totalProducts + 10
+		limit := 10
+
+		mockRepo := &mockProductsRepository{
+			products:   testProducts,
+			totalCount: totalProducts,
+			err:        nil,
+		}
+
+		handler := NewCatalogHandler(mockRepo)
+
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/catalog?offset=%d&limit=%d", offset, limit), nil)
+		w := httptest.NewRecorder()
+
+		// Act
+		handler.HandleGet(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response Response
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+
+		assert.Empty(t, response.Products, "Should return empty array")
+		assert.Equal(t, totalProducts, response.Total)
+	})
+
+	t.Run("Returns 400 for invalid parameters pagination", func(t *testing.T) {
+		testCases := []struct {
+			name              string
+			queryParams       string
+			expectedErrorText string
+		}{
+			{
+				name:              "limit exceeds maximum",
+				queryParams:       fmt.Sprintf("limit=%d", MaxLimit+1),
+				expectedErrorText: "limit",
+			},
+			{
+				name:              "limit below minimum",
+				queryParams:       fmt.Sprintf("limit=%d", MinLimit-1),
+				expectedErrorText: "limit",
+			},
+			{
+				name:              "negative offset",
+				queryParams:       "offset=-1",
+				expectedErrorText: "offset",
+			},
+			{
+				name:              "invalid limit format",
+				queryParams:       "limit=invalid",
+				expectedErrorText: "limit",
+			},
+			{
+				name:              "invalid offset format",
+				queryParams:       "offset=invalid",
+				expectedErrorText: "offset",
+			},
+			{
+				name:              "limit zero",
+				queryParams:       "limit=0",
+				expectedErrorText: "limit",
+			},
+			{
+				name:              "both parameters invalid",
+				queryParams:       "offset=invalid&limit=invalid",
+				expectedErrorText: "offset", // Should fail on first validation
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				mockRepo := &mockProductsRepository{
+					products:   testProducts,
+					totalCount: totalProducts,
+				}
+				handler := NewCatalogHandler(mockRepo)
+
+				req := httptest.NewRequest(http.MethodGet,
+					fmt.Sprintf("/catalog?%s", tc.queryParams), nil)
+				w := httptest.NewRecorder()
+
+				handler.HandleGet(w, req)
+
+				assert.Equal(t, http.StatusBadRequest, w.Code, "Should return 400 (Bad Request)")
+				assert.Contains(t, w.Body.String(), tc.expectedErrorText, "Error message should have the invalid parameter")
+			})
+		}
+	})
+}
