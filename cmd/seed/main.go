@@ -8,8 +8,7 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
-
-	"github.com/mytheresa/go-hiring-challenge/app/database"
+	"github.com/mytheresa/go-hiring-challenge/pkg/database"
 )
 
 func main() {

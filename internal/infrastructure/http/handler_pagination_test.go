@@ -1,4 +1,4 @@
-package catalog
+package http
 
 import (
 	"fmt"
@@ -13,15 +13,15 @@ func TestHandleGet_Pagination(t *testing.T) {
 	testProducts := createTestProducts(totalProducts)
 
 	t.Run("returns default pagination when no query parameters", func(t *testing.T) {
-		mockRepo := newMockRepo(testProducts, nil)
-		handler := NewCatalogHandler(mockRepo)
+		service := newMockService(testProducts, nil)
+		handler := NewCatalogHandler(service)
 
-		w := makeRequest(handler, http.MethodGet, "/catalog")
+		w := makeRequest(handler, "/catalog")
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		response := parseResponse(t, w)
-		assert.Len(t, response.Products, DefaultLimit)
+		assert.Len(t, response.Products, defaultLimit)
 		assert.Equal(t, totalProducts, response.Total)
 		assert.Equal(t, "PROD001", response.Products[0].Code)
 	})
@@ -30,11 +30,10 @@ func TestHandleGet_Pagination(t *testing.T) {
 		offset := 10
 		limit := 5
 
-		mockRepo := newMockRepo(testProducts, nil)
-		handler := NewCatalogHandler(mockRepo)
+		service := newMockService(testProducts, nil)
+		handler := NewCatalogHandler(service)
 
-		w := makeRequest(handler, http.MethodGet,
-			fmt.Sprintf("/catalog?offset=%d&limit=%d", offset, limit))
+		w := makeRequest(handler, fmt.Sprintf("/catalog?offset=%d&limit=%d", offset, limit))
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
@@ -49,11 +48,10 @@ func TestHandleGet_Pagination(t *testing.T) {
 		offset := totalProducts - 3
 		limit := 10
 
-		mockRepo := newMockRepo(testProducts, nil)
-		handler := NewCatalogHandler(mockRepo)
+		service := newMockService(testProducts, nil)
+		handler := NewCatalogHandler(service)
 
-		w := makeRequest(handler, http.MethodGet,
-			fmt.Sprintf("/catalog?offset=%d&limit=%d", offset, limit))
+		w := makeRequest(handler, fmt.Sprintf("/catalog?offset=%d&limit=%d", offset, limit))
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
@@ -66,11 +64,10 @@ func TestHandleGet_Pagination(t *testing.T) {
 		offset := totalProducts + 10
 		limit := 10
 
-		mockRepo := newMockRepo(testProducts, nil)
-		handler := NewCatalogHandler(mockRepo)
+		service := newMockService(testProducts, nil)
+		handler := NewCatalogHandler(service)
 
-		w := makeRequest(handler, http.MethodGet,
-			fmt.Sprintf("/catalog?offset=%d&limit=%d", offset, limit))
+		w := makeRequest(handler, fmt.Sprintf("/catalog?offset=%d&limit=%d", offset, limit))
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
@@ -90,7 +87,7 @@ func TestHandleGet_PaginationValidation(t *testing.T) {
 	}{
 		{
 			name:              "limit exceeds maximum",
-			queryParams:       fmt.Sprintf("limit=%d", MaxLimit+1),
+			queryParams:       fmt.Sprintf("limit=%d", maxLimit+1),
 			expectedErrorText: "limit",
 		},
 		{
@@ -117,10 +114,10 @@ func TestHandleGet_PaginationValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := newMockRepo(testProducts, nil)
-			handler := NewCatalogHandler(mockRepo)
+			service := newMockService(testProducts, nil)
+			handler := NewCatalogHandler(service)
 
-			w := makeRequest(handler, http.MethodGet, "/catalog?"+tt.queryParams)
+			w := makeRequest(handler, "/catalog?"+tt.queryParams)
 
 			assert.Equal(t, http.StatusBadRequest, w.Code)
 			assert.Contains(t, w.Body.String(), tt.expectedErrorText)

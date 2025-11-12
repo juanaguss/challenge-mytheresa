@@ -1,16 +1,15 @@
-package catalog
+package http
 
 import (
 	"net/http"
 	"testing"
 
-	"github.com/mytheresa/go-hiring-challenge/models"
+	"github.com/mytheresa/go-hiring-challenge/internal/domain/product"
 	"github.com/stretchr/testify/assert"
 )
 
-// setupFilterTestProducts usa specific values to test filters
-func setupFilterTestProducts() []models.Product {
-	return []models.Product{
+func setupFilterTestProducts() []product.Product {
+	return []product.Product{
 		newTestProduct(1, "PROD001", 65.76, categoryClothing),
 		newTestProduct(2, "PROD002", 12.54, categoryShoes),
 		newTestProduct(3, "PROD003", 23788.75, categoryAccessories),
@@ -29,14 +28,14 @@ func TestHandleGet_Filters(t *testing.T) {
 		queryParams    string
 		expectedCount  int
 		expectedTotal  int
-		validateResult func(t *testing.T, products []Product)
+		validateResult func(t *testing.T, products []productResponse)
 	}{
 		{
 			name:          "filters by category clothing",
 			queryParams:   "category=clothing",
 			expectedCount: 2,
 			expectedTotal: 2,
-			validateResult: func(t *testing.T, products []Product) {
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Equal(t, "PROD001", products[0].Code)
 				assert.Equal(t, "PROD004", products[1].Code)
 				for _, p := range products {
@@ -49,7 +48,7 @@ func TestHandleGet_Filters(t *testing.T) {
 			queryParams:   "category=shoes",
 			expectedCount: 2,
 			expectedTotal: 2,
-			validateResult: func(t *testing.T, products []Product) {
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Equal(t, "PROD002", products[0].Code)
 				assert.Equal(t, "PROD006", products[1].Code)
 				for _, p := range products {
@@ -62,7 +61,7 @@ func TestHandleGet_Filters(t *testing.T) {
 			queryParams:   "category=accessories",
 			expectedCount: 2,
 			expectedTotal: 2,
-			validateResult: func(t *testing.T, products []Product) {
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Equal(t, "PROD003", products[0].Code)
 				assert.Equal(t, "PROD005", products[1].Code)
 				for _, p := range products {
@@ -71,12 +70,11 @@ func TestHandleGet_Filters(t *testing.T) {
 			},
 		},
 		{
-			name:          "filters by priceLessThan 10 - only cheapest products",
+			name:          "filters by priceLessThan 10",
 			queryParams:   "priceLessThan=10",
 			expectedCount: 2,
 			expectedTotal: 2,
-			validateResult: func(t *testing.T, products []Product) {
-				// Debe incluir PROD005 (9.99) y PROD006 (1.50)
+			validateResult: func(t *testing.T, products []productResponse) {
 				codes := []string{products[0].Code, products[1].Code}
 				assert.Contains(t, codes, "PROD005")
 				assert.Contains(t, codes, "PROD006")
@@ -86,24 +84,22 @@ func TestHandleGet_Filters(t *testing.T) {
 			},
 		},
 		{
-			name:          "filters by priceLessThan 50 - low to medium prices",
+			name:          "filters by priceLessThan 50",
 			queryParams:   "priceLessThan=50",
 			expectedCount: 3,
 			expectedTotal: 3,
-			validateResult: func(t *testing.T, products []Product) {
-				// Debe incluir PROD002 (12.54), PROD005 (9.99), PROD006 (1.50)
+			validateResult: func(t *testing.T, products []productResponse) {
 				for _, p := range products {
 					assert.Less(t, p.Price, 50.0)
 				}
 			},
 		},
 		{
-			name:          "filters by priceLessThan 100 - excludes expensive products",
+			name:          "filters by priceLessThan 100",
 			queryParams:   "priceLessThan=100",
 			expectedCount: 5,
 			expectedTotal: 5,
-			validateResult: func(t *testing.T, products []Product) {
-				// Debe excluir PROD003 (23788.75) y PROD099 (333.00)
+			validateResult: func(t *testing.T, products []productResponse) {
 				for _, p := range products {
 					assert.Less(t, p.Price, 100.0)
 					assert.NotEqual(t, "PROD003", p.Code)
@@ -116,7 +112,7 @@ func TestHandleGet_Filters(t *testing.T) {
 			queryParams:   "category=clothing&priceLessThan=60",
 			expectedCount: 1,
 			expectedTotal: 1,
-			validateResult: func(t *testing.T, products []Product) {
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Equal(t, "PROD004", products[0].Code)
 				assert.Equal(t, "clothing", products[0].Category)
 				assert.Equal(t, 56.00, products[0].Price)
@@ -127,8 +123,7 @@ func TestHandleGet_Filters(t *testing.T) {
 			queryParams:   "category=clothing&priceLessThan=70",
 			expectedCount: 2,
 			expectedTotal: 2,
-			validateResult: func(t *testing.T, products []Product) {
-				// Debe incluir PROD001 (65.76) y PROD004 (56.00)
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Equal(t, "PROD001", products[0].Code)
 				assert.Equal(t, "PROD004", products[1].Code)
 				for _, p := range products {
@@ -142,7 +137,7 @@ func TestHandleGet_Filters(t *testing.T) {
 			queryParams:   "category=shoes&priceLessThan=2",
 			expectedCount: 1,
 			expectedTotal: 1,
-			validateResult: func(t *testing.T, products []Product) {
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Equal(t, "PROD006", products[0].Code)
 				assert.Equal(t, 1.50, products[0].Price)
 			},
@@ -152,8 +147,7 @@ func TestHandleGet_Filters(t *testing.T) {
 			queryParams:   "category=accessories&priceLessThan=100",
 			expectedCount: 1,
 			expectedTotal: 1,
-			validateResult: func(t *testing.T, products []Product) {
-				// Solo PROD005 (9.99), excluye PROD003 (23788.75)
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Equal(t, "PROD005", products[0].Code)
 				assert.Equal(t, 9.99, products[0].Price)
 			},
@@ -163,7 +157,7 @@ func TestHandleGet_Filters(t *testing.T) {
 			queryParams:   "category=clothing&priceLessThan=1",
 			expectedCount: 0,
 			expectedTotal: 0,
-			validateResult: func(t *testing.T, products []Product) {
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Empty(t, products)
 			},
 		},
@@ -172,7 +166,7 @@ func TestHandleGet_Filters(t *testing.T) {
 			queryParams:   "category=electronics",
 			expectedCount: 0,
 			expectedTotal: 0,
-			validateResult: func(t *testing.T, products []Product) {
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Empty(t, products)
 			},
 		},
@@ -180,8 +174,8 @@ func TestHandleGet_Filters(t *testing.T) {
 			name:          "filters work with pagination - first page",
 			queryParams:   "category=clothing&offset=0&limit=1",
 			expectedCount: 1,
-			expectedTotal: 2, // Total clothing: PROD001, PROD004
-			validateResult: func(t *testing.T, products []Product) {
+			expectedTotal: 2,
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Equal(t, "PROD001", products[0].Code)
 				assert.Equal(t, "clothing", products[0].Category)
 			},
@@ -191,7 +185,7 @@ func TestHandleGet_Filters(t *testing.T) {
 			queryParams:   "category=clothing&offset=1&limit=1",
 			expectedCount: 1,
 			expectedTotal: 2,
-			validateResult: func(t *testing.T, products []Product) {
+			validateResult: func(t *testing.T, products []productResponse) {
 				assert.Equal(t, "PROD004", products[0].Code)
 				assert.Equal(t, "clothing", products[0].Category)
 			},
@@ -200,8 +194,8 @@ func TestHandleGet_Filters(t *testing.T) {
 			name:          "filters by priceLessThan with pagination",
 			queryParams:   "priceLessThan=100&offset=0&limit=3",
 			expectedCount: 3,
-			expectedTotal: 5, // Total < 100: PROD001, PROD002, PROD004, PROD005, PROD006
-			validateResult: func(t *testing.T, products []Product) {
+			expectedTotal: 5,
+			validateResult: func(t *testing.T, products []productResponse) {
 				for _, p := range products {
 					assert.Less(t, p.Price, 100.0)
 				}
@@ -211,10 +205,10 @@ func TestHandleGet_Filters(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := newMockRepo(testProducts, nil)
-			handler := NewCatalogHandler(mockRepo)
+			service := newMockService(testProducts, nil)
+			handler := NewCatalogHandler(service)
 
-			w := makeRequest(handler, http.MethodGet, "/catalog?"+tt.queryParams)
+			w := makeRequest(handler, "/catalog?"+tt.queryParams)
 
 			assert.Equal(t, http.StatusOK, w.Code)
 
@@ -263,10 +257,10 @@ func TestHandleGet_FilterValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := newMockRepo(testProducts, nil)
-			handler := NewCatalogHandler(mockRepo)
+			service := newMockService(testProducts, nil)
+			handler := NewCatalogHandler(service)
 
-			w := makeRequest(handler, http.MethodGet, "/catalog?"+tt.queryParams)
+			w := makeRequest(handler, "/catalog?"+tt.queryParams)
 
 			assert.Equal(t, http.StatusBadRequest, w.Code)
 			assert.Contains(t, w.Body.String(), tt.expectedErrorText)
