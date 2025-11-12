@@ -72,7 +72,8 @@ func (r *ProductRepository) GetAll() ([]product.Product, error) {
 	return toDomainProducts(models), nil
 }
 
-// GetFiltered retrieves filtered and paginated products.
+// GetFiltered retrieves products with pagination and filtering applied.
+// Returns the filtered products and the total count of products matching the filters.
 func (r *ProductRepository) GetFiltered(offset, limit int, filters product.Filter) ([]product.Product, int64, error) {
 	var models []productModel
 	var total int64

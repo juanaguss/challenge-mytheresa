@@ -7,6 +7,7 @@ import (
 
 	"github.com/mytheresa/go-hiring-challenge/internal/application/catalog"
 	"github.com/mytheresa/go-hiring-challenge/internal/domain/product"
+	"github.com/mytheresa/go-hiring-challenge/internal/infrastructure/http/mapper"
 	"github.com/shopspring/decimal"
 )
 
@@ -17,15 +18,9 @@ const (
 	maxLimit      = 100
 )
 
-type productResponse struct {
-	Code     string  `json:"code"`
-	Price    float64 `json:"price"`
-	Category string  `json:"category"`
-}
-
 type catalogResponse struct {
-	Products []productResponse `json:"products"`
-	Total    int               `json:"total"`
+	Products []mapper.ProductResponse `json:"products"`
+	Total    int                      `json:"total"`
 }
 
 // CatalogHandler handles HTTP requests for the product catalog.
@@ -38,7 +33,8 @@ func NewCatalogHandler(service catalog.Service) *CatalogHandler {
 	return &CatalogHandler{service: service}
 }
 
-// HandleGet handles GET /catalog requests with filtering and pagination.
+// HandleGet handles GET /catalog requests.
+// Supports optional query parameters: offset, limit, category, and priceLessThan.
 func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	offset, limit, err := parsePaginationParams(r)
 	if err != nil {
@@ -59,7 +55,7 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := catalogResponse{
-		Products: toProductResponses(products),
+		Products: mapper.ToProductResponses(products),
 		Total:    int(total),
 	}
 
@@ -115,20 +111,4 @@ func parseFilterParams(r *http.Request) (product.Filter, error) {
 	}
 
 	return filters, nil
-}
-
-func toProductResponses(products []product.Product) []productResponse {
-	responses := make([]productResponse, len(products))
-	for i, p := range products {
-		categoryCode := ""
-		if p.Category != nil {
-			categoryCode = p.Category.Code
-		}
-		responses[i] = productResponse{
-			Code:     p.Code,
-			Price:    p.Price.InexactFloat64(),
-			Category: categoryCode,
-		}
-	}
-	return responses
 }
