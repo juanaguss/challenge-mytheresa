@@ -1,7 +1,9 @@
 package catalog
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/mytheresa/go-hiring-challenge/app/api"
 	"github.com/mytheresa/go-hiring-challenge/models"
@@ -41,19 +43,61 @@ func NewCatalogHandler(r models.ProductsRepository) *Handler {
 	}
 }
 
-// HandleGet retrieves all products with their categories.
+// HandleGet retrieves all products with their categories. Accepts paginations
 func (h *Handler) HandleGet(w http.ResponseWriter, r *http.Request) {
-	res, err := h.repo.GetAllProducts()
+	offset, limit, err := parsePaginationParams(r)
+	if err != nil {
+		api.ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	products, total, err := h.repo.GetProducts(offset, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	response := Response{
-		Products: mapProductsToDTO(res),
+		Products: mapProductsToDTO(products),
+		Total:    int(total),
 	}
 
 	api.OKResponse(w, response)
+}
+
+// parsePaginationParams extracts and validates offset and limit from query params.
+func parsePaginationParams(r *http.Request) (offset, limit int, err error) {
+	offset = DefaultOffset
+	limit = DefaultLimit
+
+	// Parse offset
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		var parseErr error
+		offset, parseErr = strconv.Atoi(offsetStr)
+		if parseErr != nil {
+			return 0, 0, fmt.Errorf("invalid offset parameter")
+		}
+		if offset < 0 {
+			return 0, 0, fmt.Errorf("offset must be non-negative")
+		}
+	}
+
+	// Parse limit
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		var parseErr error
+		limit, parseErr = strconv.Atoi(limitStr)
+		if parseErr != nil {
+			return 0, 0, fmt.Errorf("invalid limit parameter")
+		}
+		if limit < MinLimit {
+			return 0, 0, fmt.Errorf("limit must be at least %d", MinLimit)
+		}
+		if limit > MaxLimit {
+			return 0, 0, fmt.Errorf("limit must not exceed %d", MaxLimit)
+		}
+	}
+
+	return offset, limit, nil
 }
 
 func mapProductsToDTO(products []models.Product) []Product {

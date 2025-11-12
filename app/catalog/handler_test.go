@@ -106,7 +106,7 @@ func TestHandleGet_Success(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code, "Response code does not match expected (Status 200 OK)")
 		assert.Equal(t, "application/json", w.Header().Get("Content-Type"), "Expected Content-Type application/json")
 
-		expectedJSON := `{"products":[{"code":"PROD001","price":270.75,"category":"clothing"},{"code":"PROD002","price":400.99,"category":"shoes"}]}`
+		expectedJSON := `{"products":[{"code":"PROD001","price":270.75,"category":"clothing"},{"code":"PROD002","price":400.99,"category":"shoes"}],"total":2}`
 		assert.JSONEq(t, expectedJSON, w.Body.String(), "Response body does not match expected JSON")
 	})
 
@@ -128,7 +128,7 @@ func TestHandleGet_Success(t *testing.T) {
 		// Assert
 		assert.Equal(t, http.StatusOK, w.Code, "Response code does not match expected (Status 200 OK)")
 
-		expectedJSON := `{"products":[]}`
+		expectedJSON := `{"products":[],"total":0}`
 		assert.JSONEq(t, expectedJSON, w.Body.String(), "Response body does not match expected empty JSON")
 
 	})
@@ -157,7 +157,7 @@ func TestHandleGet_Success(t *testing.T) {
 
 		// Assert
 		assert.Equal(t, http.StatusOK, w.Code, "Expected status 200 OK")
-		expectedJSON := `{"products":[{"code":"PROD001","price":99.01,"category":""}]}`
+		expectedJSON := `{"products":[{"code":"PROD001","price":99.01,"category":""}],"total":1}`
 		assert.JSONEq(t, expectedJSON, w.Body.String(), "Expected empty string for category when null")
 	})
 }
@@ -183,33 +183,6 @@ func TestHandleGet_Error(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "database connection failed", "Error message should be in response")
 	})
 }
-
-func TestNewCatalogHandler(t *testing.T) {
-	t.Run("Creates handler with repo", func(t *testing.T) {
-		// Arrange
-		mockRepo := &mockProductsRepository{}
-
-		// Act
-		handler := NewCatalogHandler(mockRepo)
-
-		// Assert
-		assert.NotNil(t, handler, "Handler should not be nil")
-		assert.Equal(t, mockRepo, handler.repo, "Handler should have a repo")
-	})
-}
-
-/*
-Testeo de paginacion:
-	Happy path:
-	- offset y limit declarados -> retorna paginados.
-	- offset y limit vacios -> retorna los paginados default.
-
-	Errors:
-	- limit < 1 -> badRequest.
-	- limit > 100 -> badRequest.
-	- offset < 0 -> badRequest.
-	- cualquiera es invalido -> badRequest.
-*/
 
 func TestHandlerGet_Pagination(t *testing.T) {
 	// Arrange for every test
@@ -239,12 +212,11 @@ func TestHandlerGet_Pagination(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 
-		assert.LessOrEqual(t, len(response.Products), MaxLimit, "Should not return more than maximum limit constant")
-		assert.Greater(t, len(response.Products), 0, "Should return some products")
-
+		assert.Len(t, response.Products, DefaultLimit, "Should return default limit of products")
 		assert.Equal(t, totalProducts, response.Total, "Total should match total products")
 
-		assert.Equal(t, "PROD001", response.Products[0].Code, "First product should be PROD001")
+		expectedFirstCode := fmt.Sprintf("PROD%03d", DefaultOffset+1)
+		assert.Equal(t, expectedFirstCode, response.Products[0].Code, fmt.Sprintf("First product should be %s", expectedFirstCode))
 	})
 
 	t.Run("Returns correct page with custom offset and limit", func(t *testing.T) {
@@ -404,5 +376,19 @@ func TestHandlerGet_Pagination(t *testing.T) {
 				assert.Contains(t, w.Body.String(), tc.expectedErrorText, "Error message should have the invalid parameter")
 			})
 		}
+	})
+}
+
+func TestNewCatalogHandler(t *testing.T) {
+	t.Run("Creates handler with repo", func(t *testing.T) {
+		// Arrange
+		mockRepo := &mockProductsRepository{}
+
+		// Act
+		handler := NewCatalogHandler(mockRepo)
+
+		// Assert
+		assert.NotNil(t, handler, "Handler should not be nil")
+		assert.Equal(t, mockRepo, handler.repo, "Handler should have a repo")
 	})
 }
