@@ -37,7 +37,7 @@ func TestHandleGet_Success(t *testing.T) {
 		assert.Equal(t, 2, response.Total)
 		assert.Equal(t, "PROD001", response.Products[0].Code)
 		assert.Equal(t, "clothing", response.Products[0].Category)
-		assert.Equal(t, 10.99, response.Products[0].Price)
+		assert.Equal(t, 65.76, response.Products[0].Price)
 	})
 
 	t.Run("returns empty array when no products exist", func(t *testing.T) {

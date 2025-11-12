@@ -131,13 +131,16 @@ func createTestProducts(count int) []models.Product {
 	return products
 }
 
-// makeRequest excecutes a requests and returns a ResponseRecorder
+// makeRequest executes a requests and returns a ResponseRecorder
+//
+//nolint:unparam
 func makeRequest(handler *Handler, method, url string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, url, nil)
 	w := httptest.NewRecorder()
 	handler.HandleGet(w, req)
 	return w
 }
+
 // parseResponse converts the responseBody to a Response struct.
 func parseResponse(t *testing.T, w *httptest.ResponseRecorder) Response {
 	var response Response

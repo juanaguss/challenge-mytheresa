@@ -19,7 +19,6 @@ func (p *Product) TableName() string {
 	return "products"
 }
 
-
 // ProductFilters represents the available filters for querying products.
 // Category filters by the category code.
 // PriceLessThan filters products with price below the given value.

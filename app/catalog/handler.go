@@ -7,6 +7,7 @@ import (
 
 	"github.com/mytheresa/go-hiring-challenge/app/api"
 	"github.com/mytheresa/go-hiring-challenge/models"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -51,9 +52,15 @@ func (h *Handler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	products, total, err := h.repo.GetProducts(offset, limit, models.ProductFilters{})
+	filters, err := parseFilterParams(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		api.ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	products, total, err := h.repo.GetProducts(offset, limit, filters)
+	if err != nil {
+		api.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -98,6 +105,28 @@ func parsePaginationParams(r *http.Request) (offset, limit int, err error) {
 	}
 
 	return offset, limit, nil
+}
+
+// parseFilterParams extracts and validates category and price from query parameters.
+func parseFilterParams(r *http.Request) (models.ProductFilters, error) {
+	var filters models.ProductFilters
+
+	if category := r.URL.Query().Get("category"); category != "" {
+		filters.Category = category
+	}
+
+	if priceStr := r.URL.Query().Get("priceLessThan"); priceStr != "" {
+		price, err := decimal.NewFromString(priceStr)
+		if err != nil {
+			return filters, fmt.Errorf("invalid priceLessThan parameter")
+		}
+		if price.LessThanOrEqual(decimal.Zero) {
+			return filters, fmt.Errorf("priceLessThan must be greater than 0")
+		}
+		filters.PriceLessThan = &price
+	}
+
+	return filters, nil
 }
 
 func mapProductsToDTO(products []models.Product) []Product {
