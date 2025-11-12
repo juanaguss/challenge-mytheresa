@@ -13,11 +13,16 @@ import (
 
 type mockProductsRepository struct {
 	products []models.Product
+	count    int64
 	err      error
 }
 
 func (m *mockProductsRepository) GetAllProducts() ([]models.Product, error) {
 	return m.products, m.err
+}
+
+func (m *mockProductsRepository) GetProducts(offset, limit int) ([]models.Product, int64, error) {
+	return m.products, m.count, m.err
 }
 
 func TestHandleGet_Success(t *testing.T) {
@@ -152,3 +157,16 @@ func TestNewCatalogHandler(t *testing.T) {
 		assert.Equal(t, mockRepo, handler.repo, "Handler should have a repo")
 	})
 }
+
+/*
+Testeo de paginacion:
+	Happy path:
+	- offset y limit declarados -> retorna paginados.
+	- offset y limit vacios -> retorna los paginados default.
+
+	Errors:
+	- limit < 1 -> badRequest.
+	- limit > 100 -> badRequest.
+	- offset < 0 -> badRequest.
+	- cualquiera es invalido -> badRequest.
+*/
