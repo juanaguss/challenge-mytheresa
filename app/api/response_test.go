@@ -16,7 +16,7 @@ func TestOKResponse(t *testing.T) {
 
 	sample := sampleResponse{Message: "Success"}
 
-	t.Run("succesful http200 json response", func(t *testing.T) {
+	t.Run("successful http200 json response", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
 		OKResponse(recorder, sample)
 
