@@ -1,33 +1,31 @@
-package catalog
+package http
 
 import (
 	"errors"
 	"net/http"
 	"testing"
 
-	"github.com/mytheresa/go-hiring-challenge/models"
+	"github.com/mytheresa/go-hiring-challenge/internal/domain/product"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewCatalogHandler(t *testing.T) {
-	t.Run("creates handler with repository", func(t *testing.T) {
-		mockRepo := newMockRepo(nil, nil)
-
-		handler := NewCatalogHandler(mockRepo)
+	t.Run("creates handler with service", func(t *testing.T) {
+		service := newMockService(nil, nil)
+		handler := NewCatalogHandler(service)
 
 		require.NotNil(t, handler)
-		assert.Equal(t, mockRepo, handler.repo)
 	})
 }
 
 func TestHandleGet_Success(t *testing.T) {
 	t.Run("returns products with categories", func(t *testing.T) {
 		products := createTestProducts(2)
-		mockRepo := newMockRepo(products, nil)
-		handler := NewCatalogHandler(mockRepo)
+		service := newMockService(products, nil)
+		handler := NewCatalogHandler(service)
 
-		w := makeRequest(handler, http.MethodGet, "/catalog")
+		w := makeRequest(handler, "/catalog")
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
@@ -41,10 +39,10 @@ func TestHandleGet_Success(t *testing.T) {
 	})
 
 	t.Run("returns empty array when no products exist", func(t *testing.T) {
-		mockRepo := newMockRepo([]models.Product{}, nil)
-		handler := NewCatalogHandler(mockRepo)
+		service := newMockService([]product.Product{}, nil)
+		handler := NewCatalogHandler(service)
 
-		w := makeRequest(handler, http.MethodGet, "/catalog")
+		w := makeRequest(handler, "/catalog")
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
@@ -54,13 +52,13 @@ func TestHandleGet_Success(t *testing.T) {
 	})
 
 	t.Run("returns empty category when product has none", func(t *testing.T) {
-		products := []models.Product{
+		products := []product.Product{
 			newTestProduct(99, "PROD099", 99.01, nil),
 		}
-		mockRepo := newMockRepo(products, nil)
-		handler := NewCatalogHandler(mockRepo)
+		service := newMockService(products, nil)
+		handler := NewCatalogHandler(service)
 
-		w := makeRequest(handler, http.MethodGet, "/catalog")
+		w := makeRequest(handler, "/catalog")
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
@@ -71,11 +69,11 @@ func TestHandleGet_Success(t *testing.T) {
 }
 
 func TestHandleGet_Error(t *testing.T) {
-	t.Run("returns 500 when repository fails", func(t *testing.T) {
-		mockRepo := newMockRepo(nil, errors.New("database connection failed"))
-		handler := NewCatalogHandler(mockRepo)
+	t.Run("returns 500 when service fails", func(t *testing.T) {
+		service := newMockService(nil, errors.New("database connection failed"))
+		handler := NewCatalogHandler(service)
 
-		w := makeRequest(handler, http.MethodGet, "/catalog")
+		w := makeRequest(handler, "/catalog")
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Contains(t, w.Body.String(), "database connection failed")
