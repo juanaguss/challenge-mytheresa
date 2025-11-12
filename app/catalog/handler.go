@@ -51,7 +51,7 @@ func (h *Handler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	products, total, err := h.repo.GetProducts(offset, limit)
+	products, total, err := h.repo.GetProducts(offset, limit, models.ProductFilters{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
