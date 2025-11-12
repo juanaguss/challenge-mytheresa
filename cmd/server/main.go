@@ -32,7 +32,6 @@ func main() {
 	)
 	defer close()
 
-	// Dependency injection: Repository -> Service -> Handler
 	productRepo := persistence.NewProductRepository(db)
 	catalogService := catalog.NewService(productRepo)
 	catalogHandler := httpHandler.NewCatalogHandler(catalogService)
