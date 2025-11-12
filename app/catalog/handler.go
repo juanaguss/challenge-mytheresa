@@ -17,17 +17,20 @@ type Product struct {
 	Category string  `json:"category"`
 }
 
-type CatalogHandler struct {
+// Handler handles HTTP requests for the product catalog.
+type Handler struct {
 	repo models.ProductsRepository
 }
 
-func NewCatalogHandler(r models.ProductsRepository) *CatalogHandler {
-	return &CatalogHandler{
+// NewCatalogHandler creates a new catalog handler with the given repository.
+func NewCatalogHandler(r models.ProductsRepository) *Handler {
+	return &Handler{
 		repo: r,
 	}
 }
 
-func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
+// HandleGet retrieves all products with their categories.
+func (h *Handler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	res, err := h.repo.GetAllProducts()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
