@@ -279,6 +279,38 @@ func TestProductRepository_GetFiltered(t *testing.T) {
 	})
 }
 
+func TestProductRepository_GetByCode(t *testing.T) {
+	t.Run("returns product by code with relations", func(t *testing.T) {
+		db := setupTestDB(t)
+		seedTestData(t, db)
+		repo := NewProductRepository(db)
+
+		prod, err := repo.GetByCode("PROD001")
+
+		require.NoError(t, err)
+		require.NotNil(t, prod)
+		assert.Equal(t, "PROD001", prod.Code)
+		assert.Equal(t, "89.99", prod.Price.String())
+
+		require.NotNil(t, prod.Category)
+		assert.Equal(t, "clothing", prod.Category.Code)
+
+		assert.Len(t, prod.Variants, 2)
+		assert.Equal(t, "PROD001-S", prod.Variants[0].SKU)
+	})
+
+	t.Run("returns error when product not found", func(t *testing.T) {
+		db := setupTestDB(t)
+		seedTestData(t, db)
+		repo := NewProductRepository(db)
+
+		prod, err := repo.GetByCode("NONEXISTENT")
+
+		assert.Error(t, err)
+		assert.Nil(t, prod)
+	})
+}
+
 func TestProductRepository_DomainMapping(t *testing.T) {
 	t.Run("correctly maps GORM model to domain entity", func(t *testing.T) {
 		db := setupTestDB(t)
@@ -297,6 +329,27 @@ func TestProductRepository_DomainMapping(t *testing.T) {
 		assert.IsType(t, []product.Variant{}, prod.Variants)
 	})
 
+	t.Run("variant without price inherits from product", func(t *testing.T) {
+		db := setupTestDB(t)
+		seedTestData(t, db)
+		repo := NewProductRepository(db)
+
+		prod, err := repo.GetByCode("PROD001")
+
+		require.NoError(t, err)
+
+		var variantWithoutPrice *product.Variant
+		for i, v := range prod.Variants {
+			if v.SKU == "PROD001-L" {
+				variantWithoutPrice = &prod.Variants[i]
+				break
+			}
+		}
+
+		require.NotNil(t, variantWithoutPrice)
+		assert.Equal(t, prod.Price, variantWithoutPrice.Price,
+			"Variant without price should inherit price from parent product")
+	})
 }
 
 func findProductByCode(products []product.Product, code string) *product.Product {
