@@ -72,6 +72,24 @@ func (r *ProductRepository) GetAll() ([]product.Product, error) {
 	return toDomainProducts(models), nil
 }
 
+// GetByCode retrieves a product by code with all relations.
+func (r *ProductRepository) GetByCode(code string) (*product.Product, error) {
+	var model productModel
+
+	err := r.db.
+		Preload(relationVariants).
+		Preload(relationCategory).
+		Where("code = ?", code).
+		First(&model).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	p := toDomainProduct(model)
+	return &p, nil
+}
+
 // GetFiltered retrieves products with pagination and filtering applied.
 // Returns the filtered products and the total count of products matching the filters.
 func (r *ProductRepository) GetFiltered(offset, limit int, filters product.Filter) ([]product.Product, int64, error) {
