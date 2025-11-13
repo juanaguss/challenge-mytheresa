@@ -48,14 +48,14 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	products, total, err := h.service.GetProducts(offset, limit, filters)
+	products, discountedPrices, discountPercentages, total, err := h.service.GetProducts(offset, limit, filters)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	response := catalogResponse{
-		Products: mapper.ToProductResponses(products),
+		Products: mapper.ToProductResponses(products, discountedPrices, discountPercentages),
 		Total:    int(total),
 	}
 
