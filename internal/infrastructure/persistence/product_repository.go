@@ -35,11 +35,11 @@ func (categoryModel) TableName() string {
 }
 
 type variantModel struct {
-	ID        uint   `gorm:"primaryKey"`
-	ProductID uint   `gorm:"not null"`
-	Name      string `gorm:"not null"`
-	SKU       string `gorm:"uniqueIndex;not null"`
-	Price     string `gorm:"type:decimal(10,2)"`
+	ID        uint    `gorm:"primaryKey"`
+	ProductID uint    `gorm:"not null"`
+	Name      string  `gorm:"not null"`
+	SKU       string  `gorm:"uniqueIndex;not null"`
+	Price     *string `gorm:"type:decimal(10,2)"`
 }
 
 func (variantModel) TableName() string {
@@ -139,7 +139,12 @@ func toDomainProduct(m productModel) product.Product {
 	if len(m.Variants) > 0 {
 		p.Variants = make([]product.Variant, len(m.Variants))
 		for i, v := range m.Variants {
-			price, _ := decimal.NewFromString(v.Price)
+			var price decimal.Decimal
+			if v.Price != nil {
+				price, _ = decimal.NewFromString(*v.Price)
+			} else {
+				price = p.Price
+			}
 			p.Variants[i] = product.Variant{
 				ID:        v.ID,
 				ProductID: v.ProductID,
