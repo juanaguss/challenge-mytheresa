@@ -27,6 +27,18 @@ func (m *mockRepository) GetFiltered(offset, limit int, filters product.Filter) 
 	return m.products, m.total, nil
 }
 
+func (m *mockRepository) GetByCode(code string) (*product.Product, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	for _, p := range m.products {
+		if p.Code == code {
+			return &p, nil
+		}
+	}
+	return nil, errors.New("product not found")
+}
+
 func TestService_GetProducts(t *testing.T) {
 	t.Run("returns products from repository", func(t *testing.T) {
 		expectedProducts := []product.Product{

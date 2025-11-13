@@ -8,6 +8,7 @@ import (
 type ProductRepository interface {
 	GetAll() ([]product.Product, error)
 	GetFiltered(offset, limit int, filters product.Filter) ([]product.Product, int64, error)
+	GetByCode(code string) (*product.Product, error)
 }
 
 // Service defines operations for the catalog business logic.
