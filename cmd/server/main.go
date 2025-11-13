@@ -11,10 +11,20 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/mytheresa/go-hiring-challenge/internal/application/catalog"
+	"github.com/mytheresa/go-hiring-challenge/internal/domain/discount"
 	httpHandler "github.com/mytheresa/go-hiring-challenge/internal/infrastructure/http"
 	"github.com/mytheresa/go-hiring-challenge/internal/infrastructure/persistence"
 	"github.com/mytheresa/go-hiring-challenge/pkg/database"
 )
+
+// buildDiscountEngine constructs the discount engine with business rules.
+func buildDiscountEngine() *discount.Engine {
+	strategies := []discount.Strategy{
+		discount.NewCategoryDiscountStrategy("boots", 30), // 30% off boots
+		discount.NewSKUDiscountStrategy("000003", 15),     // 15% off on this SKU
+	}
+	return discount.NewEngine(strategies)
+}
 
 func main() {
 	if err := godotenv.Load(".env"); err != nil {
@@ -33,7 +43,8 @@ func main() {
 	defer close()
 
 	productRepo := persistence.NewProductRepository(db)
-	catalogService := catalog.NewService(productRepo)
+	discountEngine := buildDiscountEngine()
+	catalogService := catalog.NewService(productRepo, discountEngine)
 	catalogHandler := httpHandler.NewCatalogHandler(catalogService)
 
 	mux := http.NewServeMux()

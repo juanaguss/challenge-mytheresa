@@ -17,9 +17,9 @@ type mockService struct {
 	err      error
 }
 
-func (m *mockService) GetProducts(offset, limit int, filters product.Filter) ([]product.Product, int64, error) {
+func (m *mockService) GetProducts(offset, limit int, filters product.Filter) ([]product.Product, []float64, []int, int64, error) {
 	if m.err != nil {
-		return nil, 0, m.err
+		return nil, nil, nil, 0, m.err
 	}
 
 	filtered := make([]product.Product, 0)
@@ -42,7 +42,7 @@ func (m *mockService) GetProducts(offset, limit int, filters product.Filter) ([]
 	total := int64(len(filtered))
 
 	if offset >= len(filtered) {
-		return []product.Product{}, total, nil
+		return []product.Product{}, []float64{}, []int{}, total, nil
 	}
 
 	end := offset + limit
@@ -50,7 +50,17 @@ func (m *mockService) GetProducts(offset, limit int, filters product.Filter) ([]
 		end = len(filtered)
 	}
 
-	return filtered[offset:end], total, nil
+	result := filtered[offset:end]
+
+	discountedPrices := make([]float64, len(result))
+	percentages := make([]int, len(result))
+	for i, p := range result {
+		price, _ := p.Price.Float64()
+		discountedPrices[i] = price
+		percentages[i] = 0
+	}
+
+	return result, discountedPrices, percentages, total, nil
 }
 
 var (

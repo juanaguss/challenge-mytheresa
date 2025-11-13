@@ -8,7 +8,7 @@ type CategoryDiscountStrategy struct {
 	percentage   int
 }
 
-// NewCategoryDiscountStrategy creates a discount strategy for a category.
+// NewCategoryDiscountStrategy creates a discount strategy for a specific category.
 func NewCategoryDiscountStrategy(categoryCode string, percentage int) *CategoryDiscountStrategy {
 	return &CategoryDiscountStrategy{
 		categoryCode: categoryCode,
@@ -16,12 +16,12 @@ func NewCategoryDiscountStrategy(categoryCode string, percentage int) *CategoryD
 	}
 }
 
-// AppliesTo checks if the product belongs to the category.
+// AppliesTo checks if the product belongs to the target category.
 func (s *CategoryDiscountStrategy) AppliesTo(p product.Product) bool {
 	return p.Category != nil && p.Category.Code == s.categoryCode
 }
 
-// CalculatePercentage returns the discount percentage.
+// CalculatePercentage returns the configured discount percentage.
 func (s *CategoryDiscountStrategy) CalculatePercentage(p product.Product) int {
 	return s.percentage
 }
