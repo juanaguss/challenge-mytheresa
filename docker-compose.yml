@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17.5
+    image: postgres:16-alpine
     environment:
       POSTGRES_PASSWORD: password
       POSTGRES_USER: postgres
@@ -12,3 +12,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8484:8484"
+    environment:
+      - HTTP_PORT=8484
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=challenge
+      - POSTGRES_PORT=5432
+      - POSTGRES_SQL_DIR=./sql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

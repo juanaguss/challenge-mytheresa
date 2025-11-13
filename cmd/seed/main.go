@@ -17,11 +17,17 @@ func main() {
 		log.Fatalf("Error loading .env file: %s", err)
 	}
 
+	host := os.Getenv("POSTGRES_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+
 	// Initialize database connection
 	db, close := database.New(
 		os.Getenv("POSTGRES_USER"),
 		os.Getenv("POSTGRES_PASSWORD"),
 		os.Getenv("POSTGRES_DB"),
+		host,
 		os.Getenv("POSTGRES_PORT"),
 	)
 	defer close()

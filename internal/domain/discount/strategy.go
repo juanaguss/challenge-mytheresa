@@ -50,3 +50,26 @@ func (e *Engine) GetDiscountPercentage(p product.Product) int {
 	}
 	return 0
 }
+
+// GetVariantDiscountPercentage returns the discount percentage for a specific variant SKU.
+// First checks SKU-specific discounts, then falls back to category discount.
+// Returns 0 if no discount applies.
+func (e *Engine) GetVariantDiscountPercentage(sku string, p product.Product) int {
+	// First check if there's a SKU-specific discount
+	for _, strategy := range e.strategies {
+		if skuStrategy, ok := strategy.(*SKUDiscountStrategy); ok {
+			if skuStrategy.AppliesToVariant(sku) {
+				return skuStrategy.CalculatePercentage(p)
+			}
+		}
+	}
+	// Fall back to category discount
+	for _, strategy := range e.strategies {
+		if _, ok := strategy.(*CategoryDiscountStrategy); ok {
+			if strategy.AppliesTo(p) {
+				return strategy.CalculatePercentage(p)
+			}
+		}
+	}
+	return 0
+}
