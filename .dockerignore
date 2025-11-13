@@ -1,0 +1,33 @@
+# Docker ignore file
+.git
+.gitignore
+README.md
+ASSIGNMENT.md
+
+# Test files
+*_test.go
+**/*_test.go
+
+# Coverage files
+coverage.out
+*.out
+
+# Build artifacts
+*.exe
+*.test
+server
+server.exe
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Vendor (will be downloaded during build)
+vendor/

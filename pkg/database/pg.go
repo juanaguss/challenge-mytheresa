@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
-func New(user, password, dbname, port string) (db *gorm.DB, close func() error) {
-	dsn := fmt.Sprintf("postgres://%s:%s@localhost:%s/%s?sslmode=disable", user, password, port, dbname)
+func New(user, password, dbname, host, port string) (db *gorm.DB, close func() error) {
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

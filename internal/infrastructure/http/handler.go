@@ -62,6 +62,34 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	okResponse(w, response)
 }
 
+// HandleGetByCode handles GET /catalog/:code requests.
+// Returns product information including variants.
+func (h *CatalogHandler) HandleGetByCode(w http.ResponseWriter, r *http.Request) {
+	code := r.PathValue("code")
+	if code == "" {
+		errorResponse(w, http.StatusBadRequest, "product code is required")
+		return
+	}
+
+	product, discountedPrice, discountPercentage, variantDiscounts, err := h.service.GetProductByCode(code)
+	if err != nil {
+		errorResponse(w, http.StatusNotFound, fmt.Sprintf("product with code %s not found", code))
+		return
+	}
+
+	// Convert service VariantDiscount to mapper VariantDiscountInfo
+	mapperVariantDiscounts := make(map[string]mapper.VariantDiscountInfo)
+	for sku, discount := range variantDiscounts {
+		mapperVariantDiscounts[sku] = mapper.VariantDiscountInfo{
+			DiscountedPrice: discount.DiscountedPrice,
+			Percentage:      discount.Percentage,
+		}
+	}
+
+	response := mapper.ToProductDetailResponse(*product, discountedPrice, discountPercentage, mapperVariantDiscounts)
+	okResponse(w, response)
+}
+
 func parsePaginationParams(r *http.Request) (offset, limit int, err error) {
 	offset = defaultOffset
 	limit = defaultLimit

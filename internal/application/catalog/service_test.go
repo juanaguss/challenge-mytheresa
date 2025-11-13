@@ -40,8 +40,9 @@ func (m *mockRepository) GetByCode(code string) (*product.Product, error) {
 }
 
 type mockDiscountEngine struct {
-	discountPercentage int
-	discountedPrice    decimal.Decimal
+	discountPercentage        int
+	discountedPrice           decimal.Decimal
+	variantDiscountPercentage int
 }
 
 func (m *mockDiscountEngine) ApplyDiscount(p product.Product) decimal.Decimal {
@@ -50,6 +51,10 @@ func (m *mockDiscountEngine) ApplyDiscount(p product.Product) decimal.Decimal {
 
 func (m *mockDiscountEngine) GetDiscountPercentage(p product.Product) int {
 	return m.discountPercentage
+}
+
+func (m *mockDiscountEngine) GetVariantDiscountPercentage(sku string, p product.Product) int {
+	return m.variantDiscountPercentage
 }
 
 func TestService_GetProducts(t *testing.T) {

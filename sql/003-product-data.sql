@@ -1,4 +1,4 @@
--- Insert 8 products
+-- Insert 9 products
 INSERT INTO products (code, price) VALUES
 ('PROD001', 10.99),
 ('PROD002', 12.49),
@@ -7,7 +7,8 @@ INSERT INTO products (code, price) VALUES
 ('PROD005', 22.99),
 ('PROD006', 5.50),
 ('PROD007', 18.20),
-('PROD008', 9.99);
+('PROD008', 9.99),
+('PROD009', 89.99);
 
 -- Insert variants for each product using product code to look up product_id
 
@@ -56,3 +57,8 @@ INSERT INTO product_variants (product_id, name, sku, price) VALUES
 -- Product 8: 1 variant
 INSERT INTO product_variants (product_id, name, sku, price) VALUES
 ((SELECT id FROM products WHERE code = 'PROD008'), 'Variant A', 'SKU008A', 10.49);
+
+-- Product 9: 2 variants (including SKU 000003 for discount testing - 15% off)
+INSERT INTO product_variants (product_id, name, sku, price) VALUES
+((SELECT id FROM products WHERE code = 'PROD009'), 'Standard', '000003', 89.99),
+((SELECT id FROM products WHERE code = 'PROD009'), 'Premium', 'SKU009B', 99.99);

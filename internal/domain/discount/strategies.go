@@ -8,7 +8,7 @@ type CategoryDiscountStrategy struct {
 	percentage   int
 }
 
-// NewCategoryDiscountStrategy creates a discount strategy for a specific category.
+// NewCategoryDiscountStrategy creates a discount strategy for a category.
 func NewCategoryDiscountStrategy(categoryCode string, percentage int) *CategoryDiscountStrategy {
 	return &CategoryDiscountStrategy{
 		categoryCode: categoryCode,
@@ -40,12 +40,26 @@ func NewSKUDiscountStrategy(sku string, percentage int) *SKUDiscountStrategy {
 	}
 }
 
-// AppliesTo checks if the product matches the SKU.
+// AppliesTo checks if the product or any of its variants match the SKU.
 func (s *SKUDiscountStrategy) AppliesTo(p product.Product) bool {
-	return p.Code == s.sku
+	if p.Code == s.sku {
+		return true
+	}
+	// Check if any variant has this SKU
+	for _, v := range p.Variants {
+		if v.SKU == s.sku {
+			return true
+		}
+	}
+	return false
 }
 
 // CalculatePercentage returns the configured discount percentage.
 func (s *SKUDiscountStrategy) CalculatePercentage(p product.Product) int {
 	return s.percentage
+}
+
+// AppliesToVariant checks if this discount applies to a specific variant.
+func (s *SKUDiscountStrategy) AppliesToVariant(sku string) bool {
+	return s.sku == sku
 }

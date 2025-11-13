@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/mytheresa/go-hiring-challenge/internal/application/catalog"
 	"github.com/mytheresa/go-hiring-challenge/internal/domain/product"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
@@ -61,6 +62,23 @@ func (m *mockService) GetProducts(offset, limit int, filters product.Filter) ([]
 	}
 
 	return result, discountedPrices, percentages, total, nil
+}
+
+func (m *mockService) GetProductByCode(code string) (*product.Product, float64, int, map[string]catalog.VariantDiscount, error) {
+	if m.err != nil {
+		return nil, 0, 0, nil, m.err
+	}
+
+	for _, p := range m.products {
+		if p.Code == code {
+			price, _ := p.Price.Float64()
+			// Create empty variant discounts map
+			variantDiscounts := make(map[string]catalog.VariantDiscount)
+			return &p, price, 0, variantDiscounts, nil
+		}
+	}
+
+	return nil, 0, 0, nil, fmt.Errorf("product not found")
 }
 
 var (

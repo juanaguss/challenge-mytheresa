@@ -46,7 +46,7 @@ func (variantModel) TableName() string {
 	return "product_variants"
 }
 
-// ProductRepository implements product.Repository using GORM.
+// ProductRepository implements Repository using GORM.
 type ProductRepository struct {
 	db *gorm.DB
 }
